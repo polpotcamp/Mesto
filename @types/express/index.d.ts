@@ -1,11 +1,9 @@
-import { ObjectId } from "mongoose";
-
-declare global {
-  namespace Express {
-    interface Request {
-      user: {
-        _id: string | ObjectId;
-      };
-    }
-  }
-}
+// import { ObjectId } from "mongoose";
+// import { JwtPayload } from "jsonwebtoken";
+// declare global {
+//   namespace Express {
+//     interface Request {
+//       user: string | ObjectIdj | JwtPayload;
+//     }
+//   }
+// }
