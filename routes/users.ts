@@ -7,13 +7,37 @@ import {
   updateUserMeAvatar,
   getUserMe,
 } from '../controllers/users';
+import { regularExpression } from '../utils/regularExpression';
 
 const auth = require('../middlewares/auth');
 
 const router = express.Router();
 router.get('/users', auth, getUsers);
+router.patch(
+  '/users/me',
+  auth,
+  celebrate({
+    body: Joi.object().keys({
+      name: Joi.string().min(2).max(30),
+      about: Joi.string().min(2).max(30),
+    }),
+  }),
+  updateUserMe,
+);
+router.patch(
+  '/users/me/avatar',
+  auth,
+  celebrate({
+    body: Joi.object().keys({
+      avatar: Joi.string().regex(regularExpression),
+    }),
+  }),
+  updateUserMeAvatar,
+);
+router.get('/users/me', auth, getUserMe);
 router.get(
   '/users/:userId',
+  auth,
   celebrate({
     params: Joi.object().keys({
       cardId: Joi.string(),
@@ -21,43 +45,5 @@ router.get(
   }),
   getUserbyId,
 );
-router.patch(
-  '/users/me',
-  celebrate({
-    headers: Joi.object().keys({
-      authorization: Joi.string(),
-    }),
-  }),
-  auth,
-  updateUserMe,
-);
-router.patch(
-  '/users/me/avatar',
-  celebrate({
-    headers: Joi.object().keys({
-      authorization: Joi.string(),
-    }),
-    body: Joi.object().keys({
-      name: Joi.string().min(2).max(30),
-      about: Joi.string().min(2).max(30),
-    }),
-  }),
-  auth,
-  updateUserMeAvatar,
-);
-router.get(
-  '/users/me',
-  celebrate({
-    headers: Joi.object().keys({
-      authorization: Joi.string(),
-    }),
-    body: Joi.object().keys({
-      avatar: Joi.string().regex(
-        /https?:\/\/(www\.)?[a-zA-Z0-9.-]+\.[a-z]{2,}(\/[^ ]*)?#?$/,
-      ),
-    }),
-  }),
-  auth,
-  getUserMe,
-);
+
 export default router;

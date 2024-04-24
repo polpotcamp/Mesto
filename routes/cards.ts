@@ -14,56 +14,44 @@ const auth = require('../middlewares/auth');
 const router = express.Router();
 router.post(
   '/cards',
+  auth,
   celebrate({
     body: Joi.object().keys({
       name: Joi.string().required().min(2).max(30),
       link: Joi.string().required(),
     }),
-    headers: Joi.object().keys({
-      authorization: Joi.string(),
-    }),
   }),
-  auth,
   createCard,
 );
 router.get('/cards', auth, getCards);
 router.delete(
   '/cards/:cardId',
+  auth,
   celebrate({
     body: Joi.object().keys({
       _id: Joi.string(),
     }),
-    headers: Joi.object().keys({
-      authorization: Joi.string(),
-    }),
   }),
-  auth,
   delCard,
 );
 router.put(
   '/cards/:cardId/likes',
+  auth,
   celebrate({
-    headers: Joi.object().keys({
-      authorization: Joi.string(),
-    }),
     params: Joi.object().keys({
       cardId: Joi.string(),
     }),
   }),
-  auth,
   likeCard,
 );
 router.delete(
   '/cards/:cardId/likes',
+  auth,
   celebrate({
-    headers: Joi.object().keys({
-      authorization: Joi.string(),
-    }),
     params: Joi.object().keys({
       cardId: Joi.string(),
     }),
   }),
-  auth,
   dislikeCard,
 );
 export default router;

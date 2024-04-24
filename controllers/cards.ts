@@ -1,13 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import {
-  HTTP_STATUS_CREATED,
-  HTTP_STATUS_NOT_FOUND,
-  HTTP_STATUS_OK,
-} from '../errors/errors';
+import { HTTP_STATUS_CREATED, HTTP_STATUS_OK } from '../errors/errors';
 import Card from '../models/card';
 import BadRequestError from '../errors/bad-request-err';
 import ForbiddenError from '../errors/forbiden-err';
 import NotFoundError from '../errors/not-found-err';
+
 export const getCards = async (
   req: Request,
   res: Response,
@@ -26,14 +23,20 @@ export const createCard = async (
   next: NextFunction,
 ) => {
   const { name, link } = req.body;
-  const ownerId = req.headers.authorization;
+  const ownerId = req.user._id;
   try {
     const newCard = await Card.create({ name, link, owner: ownerId });
     return res.status(HTTP_STATUS_CREATED).send({ data: newCard });
-  } catch (error) {
-    throw new BadRequestError(
-      'Переданы некорректные данные в методы создания карточки',
-    );
+  } catch (error: any) {
+    if (error.name === 'ValidationError') {
+      next(
+        new BadRequestError(
+          'Переданы некорректные данные в методы создания карточки',
+        ),
+      );
+    } else {
+      return next(error);
+    }
   }
 };
 
@@ -43,10 +46,15 @@ export const delCard = async (
   next: NextFunction,
 ) => {
   const cardId = req.body._id;
-  const { authorization } = req.headers;
+  const authorization = req.headers.authorization as string;
   try {
     const card = await Card.findById(cardId);
-    if (card?.owner !== authorization) {
+    if (!card) {
+      throw new NotFoundError(
+        'Карточка не найдена или был запрошен несуществующий роут',
+      );
+    }
+    if (card.owner.toString() !== authorization) {
       throw new ForbiddenError('У вас нет прав для удаления этой карточки');
     }
     const delcard = await Card.findByIdAndDelete(cardId);
@@ -69,7 +77,7 @@ export const likeCard = async (
   try {
     const likeCard = await Card.findByIdAndUpdate(
       req.params.cardId,
-      { $addToSet: { likes: req.headers.authorization } },
+      { $addToSet: { likes: req.user._id } },
       { new: true },
     );
     if (likeCard) {
@@ -92,7 +100,7 @@ export const dislikeCard = async (
   try {
     const likeCard = await Card.findByIdAndUpdate(
       req.params.cardId,
-      { $pull: { likes: req.headers.authorization } },
+      { $pull: { likes: req.user._id } },
       { new: true },
     );
     if (likeCard) {

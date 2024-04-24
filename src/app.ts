@@ -1,10 +1,12 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import mongoose from 'mongoose';
 import { celebrate, Joi } from 'celebrate';
 import userRouter from '../routes/users';
 import cardRouter from '../routes/cards';
 import { login, createUser } from '../controllers/users';
+import NotFoundError from '../errors/not-found-err';
+import { regularExpression } from '../utils/regularExpression';
 
 const { errors } = require('celebrate');
 const handleError = require('../middlewares/handleError');
@@ -41,15 +43,16 @@ app.post(
     body: Joi.object().keys({
       name: Joi.string().min(2).max(30),
       about: Joi.string().min(2).max(30),
-      avatar: Joi.string().regex(
-        /https?:\/\/(www\.)?[a-zA-Z0-9.-]+\.[a-z]{2,}(\/[^ ]*)?#?$/,
-      ),
+      avatar: Joi.string().regex(regularExpression),
       email: Joi.string().required().email(),
       password: Joi.string().required().min(8),
     }),
   }),
   createUser,
 );
+app.use('*', (req: Request, res: Response, next: NextFunction) => {
+  next(new NotFoundError('Запрашиваемый ресурс не найден'));
+});
 app.use(errorLogger);
 app.use(errors());
 app.use(handleError);

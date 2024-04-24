@@ -14,31 +14,44 @@ export const createUser = async (
   next: NextFunction,
 ) => {
   const { name, avatar, about, email, password } = req.body;
-  try {
-    const hashPassword = await bcrypt.hash(password, 10);
-    const newUser = await User.create({
-      name,
-      avatar,
-      about,
-      email,
-      password: hashPassword,
+  bcrypt
+    .hash(password, 10)
+    .then((hash) =>
+      User.create({
+        name,
+        avatar,
+        about,
+        email,
+        password: hash,
+      }),
+    )
+    .then((user) =>
+      res.status(HTTP_STATUS_CREATED).send({
+        data: {
+          name: user.name,
+          about: user.about,
+          avatar: user.avatar,
+          email: user.email,
+          _id: user._id,
+        },
+      }),
+    )
+    .catch((error: any) => {
+      if (error.name === 'ValidationError') {
+        next(
+          new BadRequestError(
+            'Переданы некорректные данные в методы создания карточки',
+          ),
+        );
+      } else if (error.code === 11000) {
+        next(
+          new ConflictError(
+            'Переданы некорректные данные в методы создания пользователя',
+          ),
+        );
+      }
+      return next(error);
     });
-    if (!newUser) {
-      throw new BadRequestError(
-        'Переданы некорректные данные в методы создания пользователя',
-      );
-    }
-    return res.status(HTTP_STATUS_CREATED).send({ data: newUser });
-  } catch (error: any) {
-    if (error.code === 11000) {
-      next(
-        new ConflictError(
-          'Переданы некорректные данные в методы создания пользователя',
-        ),
-      );
-    }
-    return next(error);
-  }
 };
 export const getUserMe = async (
   req: Request,
@@ -46,8 +59,8 @@ export const getUserMe = async (
   next: NextFunction,
 ) => {
   try {
-    const { authorization } = req.headers;
-    const user = await User.findById(authorization);
+    const userId = req.user._id;
+    const user = await User.findById(userId);
     if (user) {
       return res.status(HTTP_STATUS_OK).send({ data: user });
     } else {
@@ -96,7 +109,7 @@ export const updateUserMe = async (
   next: NextFunction,
 ) => {
   try {
-    const userId = req.headers.authorization;
+    const userId = req.user._id;
     const { name, about } = req.body;
     const user = await User.findByIdAndUpdate(userId, { name, about });
     if (user) {
@@ -116,7 +129,7 @@ export const updateUserMeAvatar = async (
   next: NextFunction,
 ) => {
   try {
-    const userId = req.headers.authorization;
+    const userId = req.user._id;
     const { avatar } = req.body;
     const user = await User.findByIdAndUpdate(userId, { avatar });
     if (user) {
@@ -137,7 +150,7 @@ export const login = async (
 ) => {
   const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('+password');
     if (!user) {
       throw new UnauthorizedError('Неверный email или пароль');
     }
