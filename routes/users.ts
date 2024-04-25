@@ -40,7 +40,7 @@ router.get(
   auth,
   celebrate({
     params: Joi.object().keys({
-      cardId: Joi.string(),
+      userId: Joi.string().length(24),
     }),
   }),
   getUserbyId,
